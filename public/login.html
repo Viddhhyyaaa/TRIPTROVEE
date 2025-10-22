@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login / Sign In</title>
+  <link rel="stylesheet" href="css/login.css">
+</head>
+<body>
+<br>
+<br>
+    <div class="cont">
+        <div class="form sign-in">
+            <h2>Welcome</h2>
+            <label>
+                <span>Email</span>
+                <input type="email" id="loginEmail" required />
+            </label>
+            <label>
+                <span>Password</span>
+                <input type="password" id="loginPassword" required />
+            </label>
+            <p class="forgot-pass">Forgot password?</p>
+            <button type="button" class="submit" onclick="login()">Sign In</button>
+            <div id="loginMessage" class="message"></div>
+         
+        </div>
+        <div class="sub-cont">
+            <div class="img">
+                <div class="img__text m--up">
+                 
+                    <h3>Don't have an account? Please Sign up!<h3>
+                </div>
+                <div class="img__text m--in">
+                
+                    <h3>If you already has an account, just sign in.<h3>
+                </div>
+                <div class="img__btn">
+                    <span class="m--up">Sign Up</span>
+                    <span class="m--in">Sign In</span>
+                </div>
+            </div>
+            <div class="form sign-up">
+                <h2>Create your Account</h2>
+                <label>
+                    <span>Username</span>
+                    <input type="text" id="signupUsername" required />
+                </label>
+                <label>
+                    <span>Email</span>
+                    <input type="email" id="signupEmail" required />
+                </label>
+                <label>
+                    <span>Password</span>
+                    <input type="password" id="signupPassword" required />
+                </label>
+                <button type="button" class="submit" onclick="signup()">Sign Up</button>
+                <div id="signupMessage" class="message"></div>
+                
+            </div>
+        </div>
+    </div>
+
+    <div class="sub-const-1">
+      <div class="const">
+        <!-- Content you want to slide out -->
+      </div>
+    </div>
+
+    <script>
+        document.querySelector('.img__btn').addEventListener('click', function() {
+            document.querySelector('.cont').classList.toggle('s--signup');
+        });
+        document.querySelector('.sub-const-1 .const').classList.add('slide-out');
+
+        // Login function
+        async function login() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const messageDiv = document.getElementById('loginMessage');
+
+            if (!email || !password) {
+                showMessage(messageDiv, 'Please fill in all fields', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage(messageDiv, data.message, 'success');
+                    // Store user data in localStorage
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    // Redirect to main page after successful login
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1500);
+                } else {
+                    showMessage(messageDiv, data.message, 'error');
+                }
+            } catch (error) {
+                showMessage(messageDiv, 'Network error. Please try again.', 'error');
+            }
+        }
+
+        // Signup function
+        async function signup() {
+            const username = document.getElementById('signupUsername').value;
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            const messageDiv = document.getElementById('signupMessage');
+
+            if (!username || !email || !password) {
+                showMessage(messageDiv, 'Please fill in all fields', 'error');
+                return;
+            }
+
+            if (password.length < 6) {
+                showMessage(messageDiv, 'Password must be at least 6 characters long', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/signup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage(messageDiv, data.message, 'success');
+                    // Clear form
+                    document.getElementById('signupUsername').value = '';
+                    document.getElementById('signupEmail').value = '';
+                    document.getElementById('signupPassword').value = '';
+                    // Switch to login form
+                    setTimeout(() => {
+                        document.querySelector('.cont').classList.remove('s--signup');
+                        showMessage(document.getElementById('loginMessage'), 'Account created! Please sign in.', 'success');
+                    }, 1500);
+                } else {
+                    showMessage(messageDiv, data.message, 'error');
+                }
+            } catch (error) {
+                showMessage(messageDiv, 'Network error. Please try again.', 'error');
+            }
+        }
+
+        // Helper function to show messages
+        function showMessage(element, message, type) {
+            element.textContent = message;
+            element.className = `message ${type}`;
+            element.style.display = 'block';
+            
+            // Hide message after 5 seconds
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 5000);
+        }
+
+        // Allow Enter key to submit forms
+        document.getElementById('loginPassword').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                login();
+            }
+        });
+
+        document.getElementById('signupPassword').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                signup();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+/* Import Montserrat font */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+
+/* Apply globally */
+body {
+    font-family: 'Montserrat', sans-serif;
+}
+
+/* Glass header */
+.glass-header {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 6px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* Vibe checkboxes (glass effect hover) */
+.mood-options label {
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.mood-options input[type="checkbox"]:checked + label {
+    background-color: rgba(33, 150, 243, 0.8);
+    color: white;
+    box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3);
+}
+
+/* Glass container shadow */
+.container, .results-box div {
+    box-shadow: 0 8px 32px 0 rgba(0, 123, 255, 0.2); /* light blue shadow */
+    border-radius: 16px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+/* Buttons */
+button, a.button {
+    font-family: 'Montserrat', sans-serif;
+    transition: all 0.3s ease;
+}
+
+button:hover, a.button:hover {
+    transform: translateY(-2px);
+}
+
+/* Glass cards for recommendations */
+.recommendation-card {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 15px;
+    color: black;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 32px rgba(0, 123, 255, 0.2);
+}
+
+/* Range input style */
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: #4CAF50;
+    cursor: pointer;
+}
+
+input[type=range]::-moz-range-thumb {
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: #4CAF50;
+    cursor: pointer;
+}
+
+/* Responsive tweaks */
+@media (max-width: 600px) {
+    .container {
+        padding: 20px 25px;
+    }
+
+    h1, h2 {
+        font-size: 1.8rem;
+    }
+
+    .mood-options label {
+        padding: 8px 15px;
+        font-size: 0.9rem;
+    }
+
+    button[type="submit"] {
+        padding: 12px;
+        font-size: 1rem;
+    }
+}
