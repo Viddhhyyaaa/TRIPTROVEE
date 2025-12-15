@@ -82,8 +82,9 @@ Return ONLY the JSON array.
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
-          temperature: 0.4,
-          maxOutputTokens: 800,
+        temperature: 0.4,
+        maxOutputTokens: 1200,
+        responseMimeType: "application/json"
         },
       }),
     });
