@@ -40,9 +40,10 @@ app.post("/recommendations", async (req, res) => {
       return res.status(400).json({ error: "City and vibe are required." });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY || "AIzaSyA_073P52WB8VplgeYKC3UWiE9eN7p3OGg";
+    const apiKey = process.env.GEMINI_API_KEY || "AIzaSyDdnwlDs0ZUeL6T0wUZJ0HMu8aMJm27ohI";
     const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+    const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+
 
     const prompt = `
 Recommend exactly 4 unique ${vibe} places in ${city}.
@@ -223,9 +224,9 @@ app.post("/recommend", async (req, res) => {
     if (!city || !vibes || vibes.length === 0)
       return res.status(400).json({ error: "City and vibes are required" });
 
-    const apiKey = process.env.GEMINI_API_KEY || "AIzaSyA_073P52WB8VplgeYKC3UWiE9eN7p3OGg";
-    const modelName = "gemini-1.5-flash";
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+    const apiKey = process.env.GEMINI_API_KEY || "AIzaSyDdnwlDs0ZUeL6T0wUZJ0HMu8aMJm27ohI";
+    const modelName = "gemini-2.5-flash";
+    const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
     const prompt = `
       Suggest 6 to 8 travel places near ${city} within ${radius} km radius.
