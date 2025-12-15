@@ -30,7 +30,7 @@ app.get("/", (req, res) => {
 });
 
 //
-// 🌍 RECOMMENDATIONS (Day Planner logic — your original code)
+// 🌍 RECOMMENDATIONS — JSON-safe Gemini integration
 //
 app.post("/recommendations", async (req, res) => {
   try {
@@ -40,112 +40,107 @@ app.post("/recommendations", async (req, res) => {
       return res.status(400).json({ error: "City and vibe are required." });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY || "AIzaSyDdnwlDs0ZUeL6T0wUZJ0HMu8aMJm27ohI";
-    const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-    const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+    const apiKey = process.env.GEMINI_API_KEY;
+    const MODEL = "gemini-2.5-flash";
 
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
+    // 🔒 STRICT JSON-ONLY PROMPT
     const prompt = `
-Recommend exactly 4 unique ${vibe} places in ${city}.
-Requirements:
-- Each place on a separate line.
-- Format: Name | 1-2 sentence description | Distance from city center.
-- Do NOT repeat places already visited (${visited.join(", ")}) or recently selected (${selected.join(", ")}).
-- If bookmarked places exist (${bookmarked.join(", ")}), include 1-2 of them.
-- Provide ONLY the 4 lines. No bullets, no extra text.
+You are a strict JSON API.
+
+Return ONLY valid JSON.
+NO markdown.
+NO explanation.
+NO extra text.
+
+Return EXACTLY 4 places in this format:
+
+[
+  {
+    "name": "Place name",
+    "description": "1–2 sentence description",
+    "distance": "Distance from city center"
+  }
+]
+
+Rules:
+- City: ${city}
+- Vibe: ${vibe}
+- Exclude visited: ${visited.join(", ") || "None"}
+- Exclude selected: ${selected.join(", ") || "None"}
+- If bookmarked exists, include 1 or 2: ${bookmarked.join(", ") || "None"}
+
+Return ONLY the JSON array.
 `;
 
     const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
       },
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
-          temperature: 0.5,
-          maxOutputTokens: 600,
-          candidateCount: 1,
+          temperature: 0.4,
+          maxOutputTokens: 800,
         },
       }),
     });
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`Gemini API error: ${response.status} - ${text}`);
+      throw new Error(`Gemini API error ${response.status}: ${text}`);
     }
 
     const result = await response.json();
-    const content = result?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    const rawText =
+      result?.candidates?.[0]?.content?.parts?.[0]?.text;
 
-    const places = [];
-
-    if (content) {
-      const lines = content.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-
-      for (const line of lines) {
-        if (!line.includes("|")) continue;
-
-        const [nameRaw, descRaw, distRaw] = line.split("|");
-        const name = nameRaw?.trim();
-        const description = descRaw?.trim();
-        const distance = distRaw?.trim();
-
-        if (name && description && distance) {
-          const lat = 12.9716 + (Math.random() * 0.2 - 0.1);
-          const lng = 77.5946 + (Math.random() * 0.2 - 0.1);
-          places.push({
-            name,
-            description,
-            distance,
-            coordinates: `${lat},${lng}`,
-            mapUrl: `https://www.google.com/maps/search/${encodeURIComponent(name)}+${encodeURIComponent(city)}`,
-          });
-          if (places.length === 4) break;
-        }
-      }
+    if (!rawText) {
+      throw new Error("Empty Gemini response");
     }
 
-    if (places.length !== 4) {
-      return res.json([
-        {
-          name: "Lalbagh Botanical Garden",
-          description: "Famous botanical garden with diverse plant species and beautiful landscapes.",
-          distance: "3 km from city center",
-          coordinates: "12.9507,77.5848",
-          mapUrl: "https://www.google.com/maps/search/Lalbagh+Botanical+Garden+Bangalore",
-        },
-        {
-          name: "Cubbon Park",
-          description: "Large public park perfect for walking and relaxation in the heart of the city.",
-          distance: "1 km from city center",
-          coordinates: "12.9767,77.5928",
-          mapUrl: "https://www.google.com/maps/search/Cubbon+Park+Bangalore",
-        },
-        {
-          name: "Bangalore Palace",
-          description: "Historic palace with Tudor-style architecture and royal heritage.",
-          distance: "5 km from city center",
-          coordinates: "12.9988,77.5928",
-          mapUrl: "https://www.google.com/maps/search/Bangalore+Palace+Bangalore",
-        },
-        {
-          name: "Vidhana Soudha",
-          description: "Iconic government building showcasing Dravidian architecture.",
-          distance: "2 km from city center",
-          coordinates: "12.9784,77.5908",
-          mapUrl: "https://www.google.com/maps/search/Vidhana+Soudha+Bangalore",
-        },
-      ]);
+    // 🧠 PARSE JSON SAFELY
+    let places;
+    try {
+      places = JSON.parse(rawText);
+    } catch (err) {
+      console.error("Invalid JSON from Gemini:", rawText);
+      throw new Error("Gemini returned invalid JSON");
     }
 
-    res.json(places);
+    // 🛡 VALIDATION (hard guarantee)
+    if (!Array.isArray(places) || places.length !== 4) {
+      throw new Error("Gemini did not return exactly 4 places");
+    }
+
+    // 📍 ADD COORDS + MAP LINKS
+    const enrichedPlaces = places.map((p) => {
+      const lat = 12.9716 + (Math.random() * 0.2 - 0.1);
+      const lng = 77.5946 + (Math.random() * 0.2 - 0.1);
+
+      return {
+        ...p,
+        coordinates: `${lat},${lng}`,
+        mapUrl: `https://www.google.com/maps/search/${encodeURIComponent(
+          p.name
+        )}+${encodeURIComponent(city)}`,
+      };
+    });
+
+    return res.json(enrichedPlaces);
+
   } catch (err) {
-    console.error("Recommendations error:", err);
-    res.status(500).json({ error: err.message || "Server error" });
+    console.error("Recommendations error:", err.message);
+
+    // 🔁 SAFE FALLBACK (only if Gemini truly fails)
+    return res.status(500).json({
+      error: "Failed to generate recommendations",
+    });
   }
 });
+
 
 //
 // 👤 USER SIGNUP
