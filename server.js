@@ -122,41 +122,6 @@ Return ONLY the JSON array.
 
 
 //
-// 👤 USER SIGNUP
-//
-app.post("/signup", async (req, res) => {
-  try {
-    const { username, email, password } = req.body;
-
-    if (!username || !email || !password)
-      return res.status(400).json({ message: "All fields are required" });
-    if (password.length < 6)
-      return res.status(400).json({ message: "Password must be at least 6 characters long" });
-
-    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
-    if (existingUser) {
-      return res.status(400).json({
-        message:
-          existingUser.email === email
-            ? "Email already exists"
-            : "Username already exists",
-      });
-    }
-
-    const newUser = new User({ username, email, password });
-    await newUser.save();
-
-    res.status(201).json({
-      message: "User registered successfully",
-      user: { id: newUser._id, username: newUser.username, email: newUser.email },
-    });
-  } catch (err) {
-    console.error("Signup error:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
-});
-
-//
 // 🔐 USER LOGIN
 //
 app.post("/login", async (req, res) => {
