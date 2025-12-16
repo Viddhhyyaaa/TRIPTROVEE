@@ -1,246 +1,194 @@
-const express = require("express");
-const path = require("path");
-const mongoose = require("mongoose");
-const dotenv = require("dotenv");
-const User = require("./model/user");
-const cors = require("cors");
-// Using built-in fetch (Node 18+)
+// -------------------- DOM Elements --------------------
+const planBtn = document.getElementById("planBtn");
+const tripBox = document.getElementById("tripBox");
+const plannerContainer = document.getElementById("plannerContainer");
+const daysContainer = document.getElementById("daysContainer");
+const dayPlanContainer = document.getElementById("dayPlanContainer");
 
-// Load environment variables
-dotenv.config();
+let tripData = {};
+let visitedPlaces = {};
+let bookmarkedPlaces = {};
+let selectedPlaces = {};
+let currentDay = null;
+let currentVibe = null;
+let allDaySelections = {}; // dayNumber -> array of selected place objects
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+// -------------------- Plan My Day button --------------------
+planBtn.addEventListener("click", () => {
+  const city = document.getElementById("city").value.trim();
+  const start = new Date(document.getElementById("startDate").value);
+  const end = new Date(document.getElementById("endDate").value);
 
-// MongoDB Connection
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ Connected to MongoDB"))
-  .catch((err) => console.error("❌ MongoDB connection error:", err));
+  if (!city || isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
+    alert("Please fill all details correctly.");
+    return;
+  }
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, "public")));
+  tripData = { city, start, end };
+  visitedPlaces = {};
+  bookmarkedPlaces = {};
+  selectedPlaces = {};
+  allDaySelections = {};
 
-// Root route
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  tripBox.classList.add("hidden");
+  plannerContainer.classList.remove("hidden");
+
+  generateDays(start, end);
 });
 
-//
-// 🌍 RECOMMENDATIONS — JSON-safe Gemini integration
-//
-app.post("/recommend", async (req, res) => {
-  try {
-    const { city, radius = 10, vibes = [] } = req.body;
+// -------------------- Generate day cards --------------------
+function generateDays(start, end) {
+  daysContainer.innerHTML = "";
+  let dayCounter = 1;
 
-    if (!city || !Array.isArray(vibes) || vibes.length === 0) {
-      return res.status(400).json({ error: "City and vibes are required" });
-    }
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const dateStr = d.toDateString();
+    const dayName = d.toLocaleDateString("en-US", { weekday: "long" });
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("Missing GEMINI_API_KEY");
+    const card = document.createElement("div");
+    card.className = "day-card text-white";
+    card.innerHTML = `
+      <h3 class="font-semibold">${dayName}</h3>
+      <p class="text-sm text-gray-400">${dateStr}</p>
+    `;
 
-    const MODEL = "gemini-2.5-flash";
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
+    card.addEventListener("click", () =>
+      selectDay(dayCounter, dayName, dateStr)
+    );
 
-    // 🔒 STRICT JSON PROMPT
-    const prompt = `
-You are a strict JSON API.
-
-Return ONLY valid JSON.
-NO markdown.
-NO explanation.
-NO text outside JSON.
-
-Return an array of 6 to 8 objects in this exact format:
-
-[
-  {
-    "name": "string",
-    "description": "string",
-    "distance": "number (km)",
-    "fare": "number",
-    "rating": "number",
-    "latitude": "number",
-    "longitude": "number"
+    daysContainer.appendChild(card);
+    dayCounter++;
   }
-]
+}
 
-Rules:
-- City: ${city}
-- Radius: ${radius} km
-- Vibes: ${vibes.join(", ")}
+// -------------------- Select a day --------------------
+function selectDay(dayNum, dayName, dateStr) {
+  currentDay = dayNum;
+  selectedPlaces = {};
+  currentVibe = null;
 
-Return ONLY the JSON array.
-`;
+  if (!allDaySelections[dayNum]) allDaySelections[dayNum] = [];
 
-    const response = await fetch(url, {
+  dayPlanContainer.innerHTML = `
+    <div class="flex flex-col gap-4">
+      <div>
+        <h2 class="text-2xl font-semibold text-white">Day ${dayNum}: ${dayName}</h2>
+        <p class="text-gray-400">${dateStr}</p>
+      </div>
+
+      <div class="flex gap-2 overflow-x-auto" id="vibeButtons"></div>
+
+      <div id="savedSummary" class="text-gray-300 text-sm"></div>
+
+      <div id="recommendations" class="grid md:grid-cols-2 gap-4"></div>
+    </div>
+  `;
+
+  renderVibes();
+  updateSavedSummary();
+}
+
+// -------------------- Render vibe buttons --------------------
+function renderVibes() {
+  const vibes = [
+    "Historic",
+    "Foodie",
+    "Beach",
+    "Nature",
+    "Art & Culture",
+    "Shopping",
+    "Nightlife",
+    "Wellness",
+  ];
+
+  const vibeContainer = document.getElementById("vibeButtons");
+  vibeContainer.innerHTML = "";
+
+  vibes.forEach((vibe) => {
+    const btn = document.createElement("button");
+    btn.className = "vibe-btn px-3 py-1 bg-purple-600 text-white rounded text-sm";
+    btn.textContent = vibe;
+
+    btn.addEventListener("click", () => {
+      currentVibe = vibe;
+      fetchVibePlaces(vibe);
+    });
+
+    vibeContainer.appendChild(btn);
+  });
+}
+
+// -------------------- Fetch places from backend --------------------
+async function fetchVibePlaces(vibe) {
+  const rec = document.getElementById("recommendations");
+  rec.innerHTML = "<p class='text-gray-400'>Loading...</p>";
+
+  try {
+    const response = await fetch("/recommend", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.5,
-          maxOutputTokens: 1500,
-          responseMimeType: "application/json"
-        }
+        city: tripData.city,
+        vibes: [vibe], // ✅ VERY IMPORTANT
       }),
     });
 
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Gemini API error ${response.status}: ${text}`);
+    const places = await response.json();
+
+    if (!Array.isArray(places)) {
+      rec.innerHTML = `<p class="text-red-500">Invalid response from server</p>`;
+      console.error("Backend response:", places);
+      return;
     }
 
-    const result = await response.json();
-    const rawText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+    rec.innerHTML = "";
 
-    if (!rawText) throw new Error("Empty Gemini response");
+    places.forEach((place) => {
+      const placeCard = document.createElement("div");
+      placeCard.className = "recommendation-card bg-gray-800 p-4 rounded";
 
-    let places;
-    try {
-      places = JSON.parse(rawText);
-    } catch (err) {
-      console.error("Invalid JSON from Gemini:", rawText);
-      throw new Error("Gemini returned malformed JSON");
-    }
+      placeCard.innerHTML = `
+        <h4 class="font-semibold text-lg text-white">${place.name}</h4>
+        <p class="text-gray-300 text-sm mb-2">${place.description}</p>
+        <p class="text-gray-400 text-xs mb-3">${place.distance}</p>
 
-    if (!Array.isArray(places) || places.length < 6) {
-      throw new Error("Gemini returned insufficient places");
-    }
+        <div class="flex gap-2">
+          <button class="select-btn bg-green-600 text-white px-3 py-1 rounded text-sm">Select</button>
+          <button class="map-btn bg-orange-600 text-white px-3 py-1 rounded text-sm">Map</button>
+        </div>
+      `;
 
-    res.json(places);
+      // Select
+      placeCard.querySelector(".select-btn").onclick = () => {
+        allDaySelections[currentDay].push(place);
+        visitedPlaces[place.name] = true;
+        placeCard.style.opacity = "0.5";
+        placeCard.style.pointerEvents = "none";
+        updateSavedSummary();
+      };
 
-  } catch (err) {
-    console.error("💥 /recommend error:", err.message);
-    res.status(500).json({ error: "Failed to generate recommendations" });
-  }
-});
+      // Map
+      placeCard.querySelector(".map-btn").onclick = () => {
+        window.open(place.mapUrl, "_blank");
+      };
 
-
-//
-// 🔐 USER LOGIN
-//
-app.post("/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    if (!email || !password)
-      return res.status(400).json({ message: "Email and password are required" });
-
-    const user = await User.findOne({ email });
-    if (!user) return res.status(401).json({ message: "Invalid credentials" });
-
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
-
-    res.status(200).json({
-      message: "Login successful",
-      user: { id: user._id, username: user.username, email: user.email },
-    });
-  } catch (err) {
-    console.error("Login error:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
-  }
-});
-
-//
-// 🚀 SERVER START
-//
-app.listen(PORT, () => {
-  console.log(`✅ Triptrove is live at: http://localhost:${PORT}`);
-});
-
-//
-// 🌎 NEW ROUTE: /recommend — JSON-based Gemini response
-//
-app.post("/recommend", async (req, res) => {
-  try {
-    const { city, radius = 10, vibes = [] } = req.body;
-
-    if (!city || !Array.isArray(vibes) || vibes.length === 0) {
-      return res.status(400).json({ error: "City and vibes are required" });
-    }
-
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("Missing GEMINI_API_KEY");
-
-    const MODEL = "gemini-2.5-flash";
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
-
-    // 🔒 STRICT JSON PROMPT
-    const prompt = `
-You are a strict JSON API.
-
-Return ONLY valid JSON.
-NO markdown.
-NO explanation.
-NO text outside JSON.
-
-Return an array of 6 to 8 objects in this exact format:
-
-[
-  {
-    "name": "string",
-    "description": "string",
-    "distance": "number (km)",
-    "fare": "number",
-    "rating": "number",
-    "latitude": "number",
-    "longitude": "number"
-  }
-]
-
-Rules:
-- City: ${city}
-- Radius: ${radius} km
-- Vibes: ${vibes.join(", ")}
-
-Return ONLY the JSON array.
-`;
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.5,
-          maxOutputTokens: 1500,
-          responseMimeType: "application/json"
-        }
-      }),
+      rec.appendChild(placeCard);
     });
 
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Gemini API error ${response.status}: ${text}`);
-    }
-
-    const result = await response.json();
-    const rawText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!rawText) throw new Error("Empty Gemini response");
-
-    let places;
-    try {
-      places = JSON.parse(rawText);
-    } catch (err) {
-      console.error("Invalid JSON from Gemini:", rawText);
-      throw new Error("Gemini returned malformed JSON");
-    }
-
-    if (!Array.isArray(places) || places.length < 6) {
-      throw new Error("Gemini returned insufficient places");
-    }
-
-    res.json(places);
-
   } catch (err) {
-    console.error("💥 /recommend error:", err.message);
-    res.status(500).json({ error: "Failed to generate recommendations" });
+    console.error(err);
+    rec.innerHTML = `<p class="text-red-500">Failed to fetch recommendations</p>`;
   }
-});
+}
+
+// -------------------- Update saved summary --------------------
+function updateSavedSummary() {
+  const el = document.getElementById("savedSummary");
+  if (!el || currentDay == null) return;
+
+  const count = allDaySelections[currentDay].length;
+  el.textContent =
+    count > 0
+      ? `Saved for Day ${currentDay}: ${count} place(s)`
+      : "No places saved yet";
+}
