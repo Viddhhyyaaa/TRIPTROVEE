@@ -13,24 +13,9 @@ let currentDay = null;
 let currentVibe = null;
 let allDaySelections = {}; // dayNumber -> array of selected place objects
 // -------------------- Get User Current Location --------------------
-function getUserLocation() {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject("Geolocation not supported");
-      return;
-    }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        resolve({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        });
-      },
-      () => reject("Location permission denied")
-    );
-  });
-}
+
+    
 
 // -------------------- Plan My Day button --------------------
 planBtn.addEventListener("click", () => {
@@ -128,7 +113,7 @@ async function fetchVibePlaces(vibe) {
   rec.innerHTML = "<p class='text-gray-400'>Loading...</p>";
 
   try {
-    const response = await fetch("/recommendations", {
+    const response = await fetch("/recommend", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
