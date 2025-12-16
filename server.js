@@ -32,70 +32,61 @@ app.get("/", (req, res) => {
 //
 // 🌍 RECOMMENDATIONS — JSON-safe Gemini integration
 //
-app.post("/recommendations", async (req, res) => {
+app.post("/recommend", async (req, res) => {
   try {
-    const { city, vibe, visited = [], bookmarked = [], selected = [],  userLocation, } = req.body;
+    const { city, radius = 10, vibes = [] } = req.body;
 
-    if (!city || !vibe) {
-      return res.status(400).json({ error: "City and vibe are required." });
-    }
-    if (
-      !userLocation ||
-      typeof userLocation.lat !== "number" ||
-      typeof userLocation.lng !== "number"
-    ) {
-      return res
-        .status(400)
-        .json({ error: "User current location is required." });
+    if (!city || !Array.isArray(vibes) || vibes.length === 0) {
+      return res.status(400).json({ error: "City and vibes are required" });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error("Missing GEMINI_API_KEY");
+
     const MODEL = "gemini-2.5-flash";
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-
-    // 🔒 STRICT JSON-ONLY PROMPT
+    // 🔒 STRICT JSON PROMPT
     const prompt = `
 You are a strict JSON API.
 
 Return ONLY valid JSON.
 NO markdown.
 NO explanation.
-NO extra text.
+NO text outside JSON.
 
-Return EXACTLY 4 places in this format:
+Return an array of 6 to 8 objects in this exact format:
 
 [
   {
-    "name": "Place name",
-    "description": "1–2 sentence description",
-    "latitude": number,
-    "longitude": number
+    "name": "string",
+    "description": "string",
+    "distance": "number (km)",
+    "fare": "number",
+    "rating": "number",
+    "latitude": "number",
+    "longitude": "number"
   }
 ]
 
 Rules:
 - City: ${city}
-- Vibe: ${vibe}
-- Exclude visited: ${visited.join(", ") || "None"}
-- Exclude selected: ${selected.join(", ") || "None"}
-- If bookmarked exists, include 1 or 2: ${bookmarked.join(", ") || "None"}
+- Radius: ${radius} km
+- Vibes: ${vibes.join(", ")}
 
 Return ONLY the JSON array.
 `;
 
     const response = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
-        temperature: 0.4,
-        maxOutputTokens: 1200,
-        responseMimeType: "application/json"
-        },
+          temperature: 0.5,
+          maxOutputTokens: 1500,
+          responseMimeType: "application/json"
+        }
       }),
     });
 
@@ -105,65 +96,27 @@ Return ONLY the JSON array.
     }
 
     const result = await response.json();
-    const rawText =
-      result?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const rawText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
 
-    if (!rawText) {
-      throw new Error("Empty Gemini response");
-    }
+    if (!rawText) throw new Error("Empty Gemini response");
 
-    // 🧠 PARSE JSON SAFELY
     let places;
     try {
       places = JSON.parse(rawText);
     } catch (err) {
       console.error("Invalid JSON from Gemini:", rawText);
-      throw new Error("Gemini returned invalid JSON");
+      throw new Error("Gemini returned malformed JSON");
     }
 
-    // 🛡 VALIDATION (hard guarantee)
-    if (!Array.isArray(places) || places.length !== 4) {
-      throw new Error("Gemini did not return exactly 4 places");
-    }
-      function getDistanceKm(lat1, lon1, lat2, lon2) {
-      const R = 6371;
-      const dLat = ((lat2 - lat1) * Math.PI) / 180;
-      const dLon = ((lon2 - lon1) * Math.PI) / 180;
-
-      const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos((lat1 * Math.PI) / 180) *
-          Math.cos((lat2 * Math.PI) / 180) *
-          Math.sin(dLon / 2) ** 2;
-
-      return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(2);
+    if (!Array.isArray(places) || places.length < 6) {
+      throw new Error("Gemini returned insufficient places");
     }
 
-    const { lat: userLat, lng: userLng } = userLocation;
-
-    // 📍 ADD COORDS + MAP LINKS
-    const enrichedPlaces = places.map((p) => {
-      const lat = 12.9716 + (Math.random() * 0.2 - 0.1);
-      const lng = 77.5946 + (Math.random() * 0.2 - 0.1);
-
-      return {
-        ...p,
-        coordinates: `${lat},${lng}`,
-        mapUrl: `https://www.google.com/maps/search/${encodeURIComponent(
-          p.name
-        )}+${encodeURIComponent(city)}`,
-      };
-    });
-
-    return res.json(enrichedPlaces);
+    res.json(places);
 
   } catch (err) {
-    console.error("Recommendations error:", err.message);
-
-    // 🔁 SAFE FALLBACK (only if Gemini truly fails)
-    return res.status(500).json({
-      error: "Failed to generate recommendations",
-    });
+    console.error("💥 /recommend error:", err.message);
+    res.status(500).json({ error: "Failed to generate recommendations" });
   }
 });
 
