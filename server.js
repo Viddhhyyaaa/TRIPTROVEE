@@ -18,10 +18,24 @@ const PORT = process.env.PORT || 3000;
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // MongoDB
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ Connected to MongoDB"))
-  .catch(err => console.error("❌ MongoDB error:", err));
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
+});
+let isConnected = false;
+
+async function connectDB() {
+  if (isConnected) return;
+  await mongoose.connect(process.env.MONGO_URI, {
+    serverSelectionTimeoutMS: 30000,
+    socketTimeoutMS: 45000,
+    bufferCommands: false,
+  });
+  isConnected = true;
+  console.log("✅ Connected to MongoDB");
+}
+
+connectDB();
 
 // Middleware
 app.use(cors());
