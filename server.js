@@ -18,23 +18,21 @@ const PORT = process.env.PORT || 3000;
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // MongoDB
+const connectDB = async () => {
+  if (mongoose.connection.readyState >= 1) return;
+  await mongoose.connect(process.env.MONGO_URI);
+};
+
+// Add this middleware right after app.use(express.json())
 app.use(async (req, res, next) => {
-  await connectDB();
-  next();
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error("DB connection failed:", err);
+    res.status(500).json({ message: "Database connection failed" });
+  }
 });
-let isConnected = false;
-
-async function connectDB() {
-  if (isConnected) return;
-  await mongoose.connect(process.env.MONGO_URI, {
-    serverSelectionTimeoutMS: 30000,
-    socketTimeoutMS: 45000,
-    bufferCommands: false,
-  });
-  isConnected = true;
-  console.log("✅ Connected to MongoDB");
-}
-
 connectDB();
 
 // Middleware
