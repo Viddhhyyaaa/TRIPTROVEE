@@ -188,7 +188,48 @@ function updateSavedSummary() {
   const count = (allDaySelections[currentDay] || []).length;
   el.textContent = count > 0 ? `Saved for Day ${currentDay}: ${count} place(s)` : "No selections saved yet";
 }
+placeCard.querySelector(".bookmark-btn").addEventListener("click", async () => {
+    const token = localStorage.getItem('token');
+    
+    // If not logged in
+    if (!token) {
+        showToast('Please login to bookmark places', 'red');
+        return;
+    }
 
+    try {
+        const res = await fetch('/bookmark', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                name: place.name,
+                description: place.description,
+                distance: place.distance,
+                mapUrl: place.mapUrl
+            })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            bookmarkedPlaces[place.name] = true;
+            // Change button to show bookmarked
+            const btn = placeCard.querySelector('.bookmark-btn');
+            btn.textContent = '✅ Bookmarked';
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+            showToast(`Bookmarked: ${place.name}`, 'blue');
+        } else {
+            showToast(data.message, 'red');
+        }
+    } catch (err) {
+        console.error('Bookmark error:', err);
+        showToast('Failed to bookmark. Try again.', 'red');
+    }
+});
 // -------------------- Show all saved slots --------------------
 function showAllSavedSlots() {
   const modal = document.createElement("div");

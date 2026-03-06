@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TripTrove – Profile</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Montserrat', sans-serif; }
+    .stat-card div:first-child  { color: #ffffff !important; }
+    .glass-header {
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .glass-card {
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.22);
+    }
+
+    .place-card {
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 14px;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+    .place-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    }
+
+    .vibe-chip {
+      background: rgba(37,99,235,0.25);
+      border: 1px solid rgba(37,99,235,0.5);
+      color: #93c5fd;
+      border-radius: 999px;
+      padding: 4px 14px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .stat-card {
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 16px;
+      text-align: center;
+      padding: 20px 16px;
+    }
+
+    .tab-btn {
+      padding: 8px 20px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid rgba(255,255,255,0.2);
+      color: rgba(255,255,255,0.6);
+      background: transparent;
+    }
+    .tab-btn.active {
+      background: #2563eb;
+      color: white;
+      border-color: #2563eb;
+      box-shadow: 0 4px 12px rgba(37,99,235,0.4);
+    }
+
+    .spinner {
+      width: 28px; height: 28px;
+      border: 3px solid rgba(255,255,255,0.2);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .avatar-ring {
+      background: linear-gradient(135deg, #2563eb, #7c3aed, #06b6d4);
+      padding: 3px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .fade-in {
+      animation: fadeIn 0.4s ease forwards;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+
+    /* ── Dark overrides for readability — must be last ── */
+    .glass-card  { background: rgba(0,0,0,0.40) !important; }
+    .place-card  { background: rgba(0,0,0,0.40) !important; }
+    .stat-card   { background: rgba(0,0,0,0.35) !important; }
+
+    #profileUsername { color: #ffffff; text-shadow: 0 1px 4px rgba(0,0,0,0.7); }
+    #profileEmail    { color: rgba(255,255,255,0.85) !important; }
+
+    .place-card h3   { color: #ffffff !important; text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+    .place-card p    { color: rgba(255,255,255,0.88) !important; }
+    .place-card span { color: rgba(255,255,255,0.80) !important; }
+
+    .stat-card div:first-child  { color: inherit; }
+    .stat-card div:last-child   { color: rgba(255,255,255,0.85) !important; }
+  </style>
+</head>
+<body class="bg-[url('http://i.pinimg.com/1200x/37/fd/b1/37fdb107656e4410de351b2104cbf570.jpg')] bg-cover bg-center min-h-screen">
+
+  <!-- Header -->
+  <header class="glass-header fixed top-0 left-0 w-full z-50 shadow-md">
+    <div class="flex items-center justify-between px-6 py-4">
+      <a href="/" class="text-2xl font-bold text-white">triptr<span class="text-blue-400">o</span>ve</a>
+      <div class="flex items-center gap-4">
+        <a href="/place-suggestions.html" class="text-white/70 hover:text-white text-sm font-semibold transition-colors"> Discover</a>
+        <button onclick="logout()" class="bg-white/10 hover:bg-white/20 text-white text-sm font-semibold px-4 py-2 rounded-full border border-white/20 transition-all">
+          Sign Out
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="pt-24 pb-16 px-4 max-w-4xl mx-auto">
+
+    <!-- Profile Hero -->
+    <div class="glass-card rounded-2xl p-8 mb-6 fade-in">
+      <div class="flex flex-col sm:flex-row items-center sm:items-start gap-6">
+        <!-- Avatar -->
+        <div class="avatar-ring shrink-0">
+          <div class="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-3xl font-bold text-white" id="avatarInitial">?</div>
+        </div>
+
+        <!-- Info -->
+        <div class="flex-1 text-center sm:text-left">
+          <h1 class="text-2xl font-bold text-white mb-1" id="profileUsername">Loading...</h1>
+          <p class="text-white/50 text-sm mb-4" id="profileEmail">—</p>
+
+          <!-- Vibe chips -->
+          <div class="flex flex-wrap gap-2 justify-center sm:justify-start" id="vibeChips">
+            <span class="text-white/40 text-xs">No vibes yet</span>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-3 gap-3 shrink-0 w-full sm:w-auto">
+          <div class="stat-card">
+            <div class="text-2xl font-bold text-white-300" id="statSaved">—</div>
+            <div class="text-white/50 text-xs mt-1">Saved</div>
+          </div>
+          <div class="stat-card">
+            <div class="text-2xl font-bold text-white-300" id="statMaps">—</div>
+            <div class="text-white/50 text-xs mt-1">Map Opens</div>
+          </div>
+          <div class="stat-card">
+            <div class="text-2xl font-bold text-white-300" id="statVibes">—</div>
+            <div class="text-white/50 text-xs mt-1">Vibes</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex gap-2 mb-6 fade-in">
+      <button class="tab-btn active" onclick="switchTab('saved', this)"> Saved Places</button>
+      <button class="tab-btn" onclick="switchTab('interactions', this)"> Activity</button>
+    </div>
+
+    <!-- Saved Places Tab -->
+    <div id="tab-saved" class="fade-in">
+      <div id="savedPlacesContainer">
+        <div class="flex justify-center py-12"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- Interactions Tab -->
+    <div id="tab-interactions" class="hidden fade-in">
+      <div id="interactionsContainer">
+        <div class="flex justify-center py-12"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
+
+    // ─── Redirect if not logged in ────────────────────────────────────────────
+    if (!token) {
+      window.location.href = '/login.html';
+    }
+
+    // ─── Fill basic info from localStorage immediately ────────────────────────
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      document.getElementById('profileUsername').textContent = user.username || 'Traveller';
+      document.getElementById('profileEmail').textContent = user.email || '';
+      document.getElementById('avatarInitial').textContent = (user.username || 'T')[0].toUpperCase();
+    }
+
+    // ─── Tab switching ────────────────────────────────────────────────────────
+    function switchTab(tab, btn) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-saved').classList.toggle('hidden', tab !== 'saved');
+      document.getElementById('tab-interactions').classList.toggle('hidden', tab !== 'interactions');
+    }
+
+    // ─── Logout ───────────────────────────────────────────────────────────────
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('user');
+      window.location.href = '/login.html';
+    }
+
+    // ─── Fetch profile data ───────────────────────────────────────────────────
+    async function loadProfile() {
+      try {
+        const res = await fetch('/profile', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (res.status === 401) {
+          logout();
+          return;
+        }
+
+        const data = await res.json();
+
+        // Stats
+        const savedCount = data.saved_places?.length || 0;
+        const mapsCount  = data.interactions?.filter(i => i.action === 'map_opened').length || 0;
+        const vibesCount = data.vibe_history?.length || 0;
+
+        document.getElementById('statSaved').textContent = savedCount;
+        document.getElementById('statMaps').textContent  = mapsCount;
+        document.getElementById('statVibes').textContent = vibesCount;
+
+        // Vibe chips
+        if (data.vibe_history?.length > 0) {
+          document.getElementById('vibeChips').innerHTML = data.vibe_history
+            .slice(-6)
+            .map(v => `<span class="vibe-chip">${v}</span>`)
+            .join('');
+        }
+
+        // Saved places
+        renderSavedPlaces(data.saved_places || []);
+
+        // Interactions
+        renderInteractions(data.interactions || []);
+
+      } catch (err) {
+        console.error('Profile load error:', err);
+        document.getElementById('savedPlacesContainer').innerHTML =
+          `<p class="text-red-300 text-center">Failed to load profile data.</p>`;
+      }
+    }
+
+    // ─── Render saved places ──────────────────────────────────────────────────
+    function renderSavedPlaces(places) {
+  const container = document.getElementById('savedPlacesContainer');
+
+  if (places.length === 0) {
+    container.innerHTML = `
+      <div class="glass-card rounded-2xl p-12 text-center">
+        <div class="text-5xl mb-4">🗺️</div>
+        <p class="text-white font-semibold">No saved places yet</p>
+        <p class="text-white/50 text-sm mt-2">Go discover some places and hit Save!</p>
+        <a href="/front.html" class="inline-block mt-6 bg-blue-500 hover:bg-blue-600 text-white text-sm font-bold px-6 py-3 rounded-xl transition-all">Discover Places</a>
+      </div>`;
+    return;
+  }
+
+  // Group by date
+  const grouped = {};
+  [...places].reverse().forEach(p => {
+    const date = formatDate(p.saved_at);
+    if (!grouped[date]) grouped[date] = [];
+    grouped[date].push(p);
+  });
+
+  // Date boxes + detail panel
+  const dates = Object.keys(grouped);
+  let selectedDate = dates[0];
+
+  function renderDateContent(date) {
+    return grouped[date].map(p => `
+      <div class="place-card p-5 mb-3">
+        <div class="flex justify-between items-start gap-3">
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-1 flex-wrap">
+              <h3 class="text-white font-bold text-base">${p.name}</h3>
+              ${p.vibe ? `<span class="vibe-chip">${p.vibe}</span>` : ''}
+            </div>
+            ${p.description ? `<p class="text-white/80 text-sm mb-2 leading-relaxed">${p.description}</p>` : ''}
+            ${p.distance ? `<span class="text-white/50 text-xs"> ${p.distance} km</span>` : ''}
+          </div>
+          ${p.mapUrl ? `<a href="${p.mapUrl}" target="_blank" class="shrink-0 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold px-3 py-2 rounded-lg border border-white/15 transition-all"> Maps</a>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  container.innerHTML = `
+    <!-- Date boxes -->
+    <div class="flex flex-wrap gap-2 mb-5" id="dateBtns">
+      ${dates.map(date => `
+        <button onclick="selectDate('${date}', 'saved')"
+          id="date-saved-${date.replace(/\s/g,'_')}"
+          class="date-btn px-4 py-2 rounded-xl text-sm font-semibold border border-white/20 text-white/70 bg-white/10 hover:bg-blue-500/50 transition-all ${date === selectedDate ? 'bg-blue-500 !text-white border-blue-500' : ''}">
+           ${date}
+        </button>
+      `).join('')}
+    </div>
+    <!-- Content for selected date -->
+    <div id="savedDateContent">
+      ${renderDateContent(selectedDate)}
+    </div>
+  `;
+
+  window.selectDate = function(date, type) {
+    if (type === 'saved') {
+      document.getElementById('savedDateContent').innerHTML = renderDateContent(date);
+      document.querySelectorAll('#dateBtns .date-btn').forEach(b => {
+        b.classList.remove('bg-blue-500', '!text-white', 'border-blue-500');
+        b.classList.add('text-white/70', 'bg-white/10');
+      });
+      const active = document.getElementById(`date-saved-${date.replace(/\s/g,'_')}`);
+      if (active) { active.classList.add('bg-blue-500', '!text-white', 'border-blue-500'); }
+    } else {
+      document.getElementById('activityDateContent').innerHTML = renderActivityContent(date);
+      document.querySelectorAll('#activityDateBtns .date-btn').forEach(b => {
+        b.classList.remove('bg-blue-500', '!text-white', 'border-blue-500');
+        b.classList.add('text-white/70', 'bg-white/10');
+      });
+      const active = document.getElementById(`date-activity-${date.replace(/\s/g,'_')}`);
+      if (active) { active.classList.add('bg-blue-500', '!text-white', 'border-blue-500'); }
+    }
+  };
+}
+
+    // ─── Render interactions ──────────────────────────────────────────────────
+    function renderInteractions(interactions) {
+  const container = document.getElementById('interactionsContainer');
+
+  if (interactions.length === 0) {
+    container.innerHTML = `
+      <div class="glass-card rounded-2xl p-12 text-center">
+        <div class="text-5xl mb-4"></div>
+        <p class="text-white font-semibold">No activity yet</p>
+        <p class="text-white/50 text-sm mt-2">Your saves and map opens will appear here.</p>
+      </div>`;
+    return;
+  }
+
+  // Group by date
+  const grouped = {};
+  [...interactions].reverse().forEach(i => {
+    const date = formatDate(i.timestamp);
+    if (!grouped[date]) grouped[date] = [];
+    grouped[date].push(i);
+  });
+
+  const dates = Object.keys(grouped);
+  const selectedDate = dates[0];
+
+  const actionIcon = a => a === 'saved' ? '🔖' : a === 'itinerary_selected' ? '🗓️' : '🗺️';
+  const actionLabel = a => a === 'saved' ? 'Saved' : a === 'itinerary_selected' ? 'Added to itinerary' : 'Map opened';
+
+  window.renderActivityContent = function(date) {
+    return grouped[date].map(i => `
+      <div class="place-card px-5 py-4 flex items-center gap-4 mb-3">
+        <div class="text-2xl shrink-0">${actionIcon(i.action)}</div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-white font-semibold text-sm">${i.name}</span>
+            ${i.vibe ? `<span class="vibe-chip">${i.vibe}</span>` : ''}
+          </div>
+          ${i.city ? `<div class="text-white/50 text-xs mt-1"> ${i.city}</div>` : ''}
+        </div>
+        <div class="shrink-0 text-right">
+          <span class="text-yellow-300 font-bold text-sm"> ${i.rating}</span>
+          <div class="text-white/50 text-xs mt-1">${actionLabel(i.action)}</div>
+        </div>
+      </div>
+    `).join('');
+  };
+
+  container.innerHTML = `
+    <!-- Date boxes -->
+    <div class="flex flex-wrap gap-2 mb-5" id="activityDateBtns">
+      ${dates.map(date => `
+        <button onclick="selectDate('${date}', 'activity')"
+          id="date-activity-${date.replace(/\s/g,'_')}"
+          class="date-btn px-4 py-2 rounded-xl text-sm font-semibold border border-white/20 text-white/70 bg-white/10 hover:bg-blue-500/50 transition-all ${date === selectedDate ? 'bg-blue-500 !text-white border-blue-500' : ''}">
+           ${date}
+        </button>
+      `).join('')}
+    </div>
+    <!-- Content for selected date -->
+    <div id="activityDateContent">
+      ${renderActivityContent(selectedDate)}
+    </div>
+  `;
+}
+
+    // ─── Format date ──────────────────────────────────────────────────────────
+    function formatDate(dateStr) {
+      if (!dateStr) return '—';
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    // ─── Init ─────────────────────────────────────────────────────────────────
+    loadProfile();
+  </script>
+</body>
+</html>

@@ -23,6 +23,30 @@ const userSchema = new mongoose.Schema({
     required: true,
     minlength: 6
   },
+  vibe_history: { type: [String], default: [] },
+  saved_places: [{
+    name:        String,
+    city:        String,
+    vibe:        String,
+    description: String,
+    saved_at:    { type: Date, default: Date.now }
+  }],
+  itineraries: [{
+    day:    Number,
+    vibe:   String,
+    places: [String],
+    saved_at: { type: Date, default: Date.now }
+  }],
+  interactions: [{
+  name:      String,
+  city:      { type: String, default: "" },
+  vibe:      { type: String, default: "" },
+  rating:    { type: Number, default: 3 },
+  latitude:  Number,
+  longitude: Number,
+  action: { type: String, enum: ["saved", "map_opened", "itinerary_selected"] },
+  timestamp: { type: Date, default: Date.now }
+}],
   createdAt: {
     type: Date,
     default: Date.now

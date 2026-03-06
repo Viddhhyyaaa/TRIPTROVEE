@@ -3,90 +3,385 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TripTrove – Smart Travel Planner</title>
+  <title>TripTrove – Place Suggestions</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="css/suggest.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Montserrat', sans-serif; }
-    .glass-header { background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-    .recommendation-card {
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(8px);
-      border-radius: 12px;
-      padding: 16px;
-      border: 1px solid rgba(255,255,255,0.3);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      transition: transform 0.3s ease;
+
+    .glass-header {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
     }
-    .recommendation-card:hover { transform: scale(1.03); }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+
+    .recommendation-card {
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(8px);
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .recommendation-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    .vibe-label {
+      transition: all 0.2s ease;
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+    .vibe-label.active {
+      background-color: #2563eb;
+      color: white;
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.5);
+      border-color: #2563eb;
+    }
+
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 4px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .location-badge {
+      background: rgba(34, 197, 94, 0.2);
+      border: 1px solid rgba(34, 197, 94, 0.5);
+      color: #86efac;
+    }
+    .location-badge.error {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      color: #fca5a5;
+    }
+
+    .save-btn-saved {
+      background: rgba(34, 197, 94, 0.6) !important;
+    }
+    .save-btn-saved:hover {
+      background: rgba(34, 197, 94, 0.8) !important;
+    }
   </style>
 </head>
 <body class="bg-[url('http://i.pinimg.com/1200x/37/fd/b1/37fdb107656e4410de351b2104cbf570.jpg')] bg-cover bg-center min-h-screen">
 
-  <!-- Glass Header -->
+  <!-- Header -->
   <header class="glass-header fixed top-0 left-0 w-full z-50 shadow-md">
     <div class="flex items-center px-6 py-5">
       <div class="text-3xl font-bold text-white">
-        triptr<span class="text-blue-500">o</span>ve
+        triptr<span class="text-blue-400">o</span>ve
       </div>
     </div>
   </header>
 
-  <main class="flex justify-center pt-36 px-4">
-    <div class="w-full max-w-2xl bg-white/20 backdrop-blur-md border border-white/30 shadow-lg shadow-blue-300 rounded-xl p-8">
-      <h1 class="text-3xl text-white text-center mb-8 font-bold">Places Suggestion</h1>
+  <main class="flex justify-center pt-32 px-4 pb-16">
+    <div class="w-full max-w-2xl glass-card rounded-2xl p-8 shadow-xl shadow-blue-900/30">
 
-      <form id="recommendationForm" class="space-y-6">
+      <h1 class="text-3xl text-white text-center mb-2 font-bold tracking-tight">Discover Places</h1>
+      <p class="text-white/60 text-center text-sm mb-8">Find your next adventure based on your vibe</p>
+
+      <!-- Location status -->
+      <div id="locationStatus" class="location-badge rounded-full px-4 py-2 text-sm text-center mb-6 font-medium">
+         Detecting your location...
+      </div>
+
+      <div class="space-y-6">
+
         <!-- City -->
         <div>
-          <label for="city" class="block text-white font-semibold mb-2">City</label>
-          <input type="text" id="city" name="city" placeholder="Enter city name" class="w-full px-4 py-2 rounded-md border border-white/40 bg-white/80 text-black focus:outline-none focus:ring-2 focus:ring-blue-400" required>
+          <label for="city" class="block text-white/80 font-semibold mb-2 text-sm uppercase tracking-wide">City</label>
+          <input type="text" id="city" placeholder="e.g. Mumbai, Delhi, Bangalore"
+            class="w-full px-4 py-3 rounded-xl border border-white/20 bg-white/10 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent">
         </div>
 
         <!-- Radius -->
         <div>
-          <label for="travelRadius" class="block text-white font-semibold mb-2">
-            Search Radius: <span id="radiusValue" class="font-bold">10</span> km
+          <label for="travelRadius" class="block text-white/80 font-semibold mb-2 text-sm uppercase tracking-wide">
+            Search Radius: <span id="radiusValue" class="text-blue-300 font-bold">10</span> km
           </label>
-          <input type="range" id="travelRadius" name="travelRadius" min="1" max="50" value="10" class="w-full h-2 bg-blue-200 rounded-lg accent-blue-500">
+          <input type="range" id="travelRadius" min="1" max="50" value="10"
+            class="w-full h-2 bg-white/20 rounded-lg accent-blue-500 cursor-pointer">
         </div>
 
         <!-- Vibes -->
         <div>
-          <label class="block text-white font-semibold mb-2">Select Your Vibe(s):</label>
-          <div class="flex flex-wrap gap-3">
-            <!-- Vibe options -->
-            <input type="checkbox" id="Adventurous" name="vibe" value="Adventurous" class="peer hidden">
-            <label for="Adventurous" class="px-4 py-2 rounded-full cursor-pointer bg-white/30 text-white hover:bg-blue-400 hover:text-white transition-all duration-300 transform scale-100 peer-checked:scale-105 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:shadow-lg">Adventurous</label>
-            <input type="checkbox" id="Cultural" name="vibe" value="Cultural" class="peer hidden">
-            <label for="Cultural" class="px-4 py-2 rounded-full cursor-pointer bg-white/30 text-white hover:bg-blue-400 hover:text-white transition-all duration-300 transform scale-100 peer-checked:scale-105 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:shadow-lg">Cultural</label>
-            <input type="checkbox" id="Romantic" name="vibe" value="Romantic" class="peer hidden">
-            <label for="Romantic" class="px-4 py-2 rounded-full cursor-pointer bg-white/30 text-white hover:bg-blue-400 hover:text-white transition-all duration-300 transform scale-100 peer-checked:scale-105 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:shadow-lg">Romantic</label>
-            <input type="checkbox" id="Peaceful" name="vibe" value="Peaceful" class="peer hidden">
-            <label for="Peaceful" class="px-4 py-2 rounded-full cursor-pointer bg-white/30 text-white hover:bg-blue-400 hover:text-white transition-all duration-300 transform scale-100 peer-checked:scale-105 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:shadow-lg">Peaceful</label>
-            <input type="checkbox" id="Nightlife" name="vibe" value="Nightlife" class="peer hidden">
-            <label for="Nightlife" class="px-4 py-2 rounded-full cursor-pointer bg-white/30 text-white hover:bg-blue-400 hover:text-white transition-all duration-300 transform scale-100 peer-checked:scale-105 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:shadow-lg">Nightlife</label>
-            <input type="checkbox" id="Photography" name="vibe" value="Photography" class="peer hidden">
-            <label for="Photography" class="px-4 py-2 rounded-full cursor-pointer bg-white/30 text-white hover:bg-blue-400 hover:text-white transition-all duration-300 transform scale-100 peer-checked:scale-105 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:shadow-lg">Photography</label>
-            <input type="checkbox" id="Historical" name="vibe" value="Historical" class="peer hidden">
-            <label for="Historical" class="px-4 py-2 rounded-full cursor-pointer bg-white/30 text-white hover:bg-blue-400 hover:text-white transition-all duration-300 transform scale-100 peer-checked:scale-105 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:shadow-lg">Historical</label>
-            <input type="checkbox" id="Solo" name="vibe" value="Solo" class="peer hidden">
-            <label for="Solo" class="px-4 py-2 rounded-full cursor-pointer bg-white/30 text-white hover:bg-blue-400 hover:text-white transition-all duration-300 transform scale-100 peer-checked:scale-105 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:shadow-lg">Solo</label>
+          <label class="block text-white/80 font-semibold mb-3 text-sm uppercase tracking-wide">Select Vibe(s)</label>
+          <div class="flex flex-wrap gap-2">
+            <input type="checkbox" id="Adventurous" name="vibe" value="Adventurous" class="hidden">
+            <label for="Adventurous" class="vibe-label px-4 py-2 rounded-full cursor-pointer bg-white/10 text-white text-sm hover:bg-blue-500/50"> Adventurous</label>
+
+            <input type="checkbox" id="Cultural" name="vibe" value="Cultural" class="hidden">
+            <label for="Cultural" class="vibe-label px-4 py-2 rounded-full cursor-pointer bg-white/10 text-white text-sm hover:bg-blue-500/50"> Cultural</label>
+
+            <input type="checkbox" id="Romantic" name="vibe" value="Romantic" class="hidden">
+            <label for="Romantic" class="vibe-label px-4 py-2 rounded-full cursor-pointer bg-white/10 text-white text-sm hover:bg-blue-500/50"> Romantic</label>
+
+            <input type="checkbox" id="Peaceful" name="vibe" value="Peaceful" class="hidden">
+            <label for="Peaceful" class="vibe-label px-4 py-2 rounded-full cursor-pointer bg-white/10 text-white text-sm hover:bg-blue-500/50"> Peaceful</label>
+
+            <input type="checkbox" id="Nightlife" name="vibe" value="Nightlife" class="hidden">
+            <label for="Nightlife" class="vibe-label px-4 py-2 rounded-full cursor-pointer bg-white/10 text-white text-sm hover:bg-blue-500/50"> Nightlife</label>
+
+            <input type="checkbox" id="Photography" name="vibe" value="Photography" class="hidden">
+            <label for="Photography" class="vibe-label px-4 py-2 rounded-full cursor-pointer bg-white/10 text-white text-sm hover:bg-blue-500/50"> Photography</label>
+
+            <input type="checkbox" id="Historical" name="vibe" value="Historical" class="hidden">
+            <label for="Historical" class="vibe-label px-4 py-2 rounded-full cursor-pointer bg-white/10 text-white text-sm hover:bg-blue-500/50"> Historical</label>
+
+            <input type="checkbox" id="Solo" name="vibe" value="Solo" class="hidden">
+            <label for="Solo" class="vibe-label px-4 py-2 rounded-full cursor-pointer bg-white/10 text-white text-sm hover:bg-blue-500/50"> Solo</label>
           </div>
         </div>
 
-        <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-lg transition">Get Suggestions</button>
-      </form>
+        <button id="getSuggestionsBtn"
+          class="w-full bg-blue-500 hover:bg-blue-600 active:scale-95 text-white font-bold py-3 rounded-xl transition-all duration-200 shadow-lg shadow-blue-500/30 text-sm uppercase tracking-widest">
+          Get Suggestions
+        </button>
+      </div>
 
+      <!-- Results -->
       <div id="results" class="mt-8 space-y-4"></div>
     </div>
   </main>
 
-  <script src="../front.js"></script>
   <script>
+    // ─── State ───────────────────────────────────────────────
+    let userLat = null;
+    let userLng = null;
+
+    // ─── Get user GPS location on page load ──────────────────
+    const locationStatus = document.getElementById("locationStatus");
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          userLat = pos.coords.latitude;
+          userLng = pos.coords.longitude;
+          locationStatus.textContent = ` Location detected (${userLat.toFixed(4)}, ${userLng.toFixed(4)})`;
+          locationStatus.classList.remove("error");
+        },
+        () => {
+          locationStatus.textContent = " Location access denied. Distance won't be accurate.";
+          locationStatus.classList.add("error");
+          userLat = 0;
+          userLng = 0;
+        }
+      );
+    } else {
+      locationStatus.textContent = " Geolocation not supported by your browser.";
+      locationStatus.classList.add("error");
+      userLat = 0;
+      userLng = 0;
+    }
+
+    // ─── Radius slider ───────────────────────────────────────
     const radiusInput = document.getElementById("travelRadius");
     const radiusValue = document.getElementById("radiusValue");
     radiusInput.addEventListener("input", () => radiusValue.textContent = radiusInput.value);
+
+    // ─── Vibe toggle ─────────────────────────────────────────
+    document.querySelectorAll("input[name='vibe']").forEach(checkbox => {
+      checkbox.addEventListener("change", () => {
+        const label = document.querySelector(`label[for="${checkbox.id}"]`);
+        label.classList.toggle("active", checkbox.checked);
+      });
+    });
+
+    // ─── Helper: get JWT from localStorage ───────────────────
+    function getToken() {
+      return localStorage.getItem("token"); // adjust key if yours differs
+    }
+
+    // ─── Log interaction (map open = rating:3, save = rating:5) ─────────────
+    async function logInteraction(name, description, latitude, longitude, fare, distance, action) {
+      const token = getToken();
+      if (!token) return; // not logged in — skip silently
+
+      const city  = document.getElementById("city").value.trim();
+      const vibes = Array.from(document.querySelectorAll("input[name='vibe']:checked")).map(v => v.value);
+
+      try {
+        await fetch("/interact", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            name, description, city,
+            vibe:      vibes[0] || "",
+            latitude, longitude, fare, distance,
+            action
+          })
+        });
+      } catch (err) {
+        console.error("Interaction log failed:", err);
+      }
+    }
+
+    // ─── Save place (rating:5) ────────────────────────────────
+    async function savePlace(name, description, latitude, longitude, fare, distance) {
+      const token = getToken();
+      if (!token) {
+        alert("Please log in to save places.");
+        return;
+      }
+
+      const safeId = name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+      const btn = document.getElementById(`save-btn-${safeId}`);
+
+      if (btn) {
+        btn.textContent = "Saving...";
+        btn.disabled = true;
+      }
+
+      const city  = document.getElementById("city").value.trim();
+      const vibes = Array.from(document.querySelectorAll("input[name='vibe']:checked")).map(v => v.value);
+
+      try {
+        const res = await fetch("/interact", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            name, description, city,
+            vibe:      vibes[0] || "",
+            latitude, longitude, fare, distance,
+            action: "saved"
+          })
+        });
+
+        const result = await res.json();
+
+        if (res.ok && result.success) {
+          if (btn) {
+            btn.textContent = "✓ Saved";
+            btn.classList.add("save-btn-saved");
+            btn.classList.remove("bg-blue-500/80", "hover:bg-blue-600");
+          }
+        } else {
+          if (btn) { btn.textContent = " Save"; btn.disabled = false; }
+          alert(result.error || "Failed to save.");
+        }
+      } catch (err) {
+        console.error("Save failed:", err);
+        if (btn) { btn.textContent = " Save"; btn.disabled = false; }
+      }
+    }
+
+    // ─── Get Suggestions ─────────────────────────────────────
+    document.getElementById("getSuggestionsBtn").addEventListener("click", async () => {
+      const city   = document.getElementById("city").value.trim();
+      const radius = document.getElementById("travelRadius").value;
+      const vibes  = Array.from(document.querySelectorAll("input[name='vibe']:checked")).map(v => v.value);
+
+      if (!city)            { alert("Please enter a city."); return; }
+      if (vibes.length === 0) { alert("Please select at least one vibe."); return; }
+
+      const token = getToken();
+      if (!token) { alert("Please log in to get recommendations."); return; }
+
+      const resultsDiv = document.getElementById("results");
+      resultsDiv.innerHTML = `
+        <div class="flex flex-col items-center gap-3 py-8">
+          <div class="spinner"></div>
+          <p class="text-white/70 text-sm">Finding the best places for you...</p>
+        </div>`;
+
+      try {
+        const response = await fetch("/recommend", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ city, userLat, userLng, radius, vibes })
+        });
+
+        const data = await response.json();
+
+        if (!data || data.error) {
+          resultsDiv.innerHTML = `<p class='text-red-300 text-center'>${data?.error || "Something went wrong."}</p>`;
+          return;
+        }
+
+        if (data.length === 0) {
+          resultsDiv.innerHTML = "<p class='text-white/60 text-center'>No places found. Try different vibes!</p>";
+          return;
+        }
+
+        // Sort by rating descending
+        data.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+
+        resultsDiv.innerHTML = data.map(p => {
+          // Safe ID: strip spaces and special chars
+          const safeId = p.name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+          // Escape values for inline onclick attributes
+          const safeName = p.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+          const safeDesc = (p.description || "").replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+          return `
+            <div class="recommendation-card">
+              <div class="flex justify-between items-start mb-2">
+                <h3 class="text-lg font-bold text-white leading-tight">${p.name}</h3>
+                <span class="text-yellow-300 font-bold text-sm ml-2 shrink-0">⭐ ${p.rating ?? '?'}</span>
+              </div>
+              <p class="text-white/70 text-sm mb-3 leading-relaxed">${p.description}</p>
+              <div class="flex gap-4 text-sm text-white/80 mb-4">
+                <span> ${p.distance} km away</span>
+                <span> ₹${p.fare ?? '?'} est. fare</span>
+              </div>
+              <div class="flex gap-2 flex-wrap">
+
+                <!-- View on Maps — logs rating:3 -->
+                <a href="https://www.google.com/maps/search/?api=1&query=${p.latitude},${p.longitude}"
+                  target="_blank"
+                  onclick="logInteraction('${safeName}', '${safeDesc}', ${p.latitude}, ${p.longitude}, ${p.fare ?? 0}, '${p.distance}', 'map_opened')"
+                  class="flex items-center gap-1 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-xs font-semibold transition-all">
+                   View on Maps
+                </a>
+
+                <!-- Book Uber -->
+                <a href="https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff[formatted_address]=${encodeURIComponent(p.name)}&dropoff[latitude]=${p.latitude}&dropoff[longitude]=${p.longitude}"
+                  target="_blank"
+                  class="flex items-center gap-1 bg-black/40 hover:bg-black/60 text-white px-4 py-2 rounded-lg text-xs font-semibold transition-all border border-white/20">
+                   Book Uber
+                </a>
+
+                <!-- Save button — logs rating:5 -->
+                <button
+                  id="save-btn-${safeId}"
+                  onclick="savePlace('${safeName}', '${safeDesc}', ${p.latitude}, ${p.longitude}, ${p.fare ?? 0}, '${p.distance}')"
+                  class="flex items-center gap-1 bg-blue-500/80 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-semibold transition-all">
+                   Save
+                </button>
+
+              </div>
+            </div>
+          `;
+        }).join('');
+
+      } catch (err) {
+        console.error(err);
+        resultsDiv.innerHTML = "<p class='text-red-300 text-center'>Something went wrong. Please try again.</p>";
+      }
+    });
   </script>
 </body>
 </html>

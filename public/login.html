@@ -67,121 +67,154 @@
       </div>
     </div>
 
-    <script>
-        document.querySelector('.img__btn').addEventListener('click', function() {
-            document.querySelector('.cont').classList.toggle('s--signup');
-        });
-        document.querySelector('.sub-const-1 .const').classList.add('slide-out');
+  <script>
+    document.querySelector('.img__btn').addEventListener('click', function() {
+        document.querySelector('.cont').classList.toggle('s--signup');
+    });
+    document.querySelector('.sub-const-1 .const').classList.add('slide-out');
 
-        // Login function
-        async function login() {
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            const messageDiv = document.getElementById('loginMessage');
+    // ── POPUP NOTIFICATION ──
+    function showPopup(message, type) {
+        // Remove existing popup if any
+        const existing = document.getElementById('popup-toast');
+        if (existing) existing.remove();
 
-            if (!email || !password) {
-                showMessage(messageDiv, 'Please fill in all fields', 'error');
-                return;
-            }
+        const popup = document.createElement('div');
+        popup.id = 'popup-toast';
+        popup.innerHTML = `
+            <span class="popup-icon">${type === 'success' ? 'Success' : 'Error'}</span>
+            <span class="popup-text">${message}</span>
+        `;
+        popup.style.cssText = `
+            position: fixed;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-80px);
+            background: ${type === 'success' ? '#2ecc71' : '#e74c3c'};
+            color: white;
+            padding: 16px 32px;
+            border-radius: 50px;
+            font-size: 15px;
+            font-weight: 600;
+            font-family: Arial, sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+            z-index: 9999;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            white-space: nowrap;
+        `;
+        document.body.appendChild(popup);
 
-            try {
-                const response = await fetch('/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ email, password })
-                });
+        // Slide down
+        setTimeout(() => {
+            popup.style.transform = 'translateX(-50%) translateY(0)';
+        }, 10);
 
-                const data = await response.json();
+        // Slide back up and remove
+        setTimeout(() => {
+            popup.style.transform = 'translateX(-50%) translateY(-80px)';
+            setTimeout(() => popup.remove(), 400);
+        }, 3000);
+    }
 
-                if (response.ok) {
-                    showMessage(messageDiv, data.message, 'success');
-                    // Store user data in localStorage
-                    localStorage.setItem('user', JSON.stringify(data.user));
-                    // Redirect to main page after successful login
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 1500);
-                } else {
-                    showMessage(messageDiv, data.message, 'error');
-                }
-            } catch (error) {
-                showMessage(messageDiv, 'Network error. Please try again.', 'error');
-            }
+    // ── LOGIN ──
+    async function login() {
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        const messageDiv = document.getElementById('loginMessage');
+
+        if (!email || !password) {
+            showPopup('Please fill in all fields', 'error');
+            return;
         }
 
-        // Signup function
-        async function signup() {
-            const username = document.getElementById('signupUsername').value;
-            const email = document.getElementById('signupEmail').value;
-            const password = document.getElementById('signupPassword').value;
-            const messageDiv = document.getElementById('signupMessage');
+        try {
+            const response = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
 
-            if (!username || !email || !password) {
-                showMessage(messageDiv, 'Please fill in all fields', 'error');
-                return;
+            const data = await response.json();
+
+            if (response.ok) {
+                // Store token and user
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('userId', data.user.id);
+                localStorage.setItem('user', JSON.stringify(data.user));
+
+                showPopup('Welcome back! Redirecting...', 'success');
+
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1500);
+            } else {
+                showPopup(data.message, 'error');
             }
+        } catch (error) {
+            showPopup('Network error. Please try again.', 'error');
+        }
+    }
 
-            if (password.length < 6) {
-                showMessage(messageDiv, 'Password must be at least 6 characters long', 'error');
-                return;
-            }
+    // ── SIGNUP ──
+    async function signup() {
+        const username = document.getElementById('signupUsername').value;
+        const email = document.getElementById('signupEmail').value;
+        const password = document.getElementById('signupPassword').value;
 
-            try {
-                const response = await fetch('/signup', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ username, email, password })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    showMessage(messageDiv, data.message, 'success');
-                    // Clear form
-                    document.getElementById('signupUsername').value = '';
-                    document.getElementById('signupEmail').value = '';
-                    document.getElementById('signupPassword').value = '';
-                    // Switch to login form
-                    setTimeout(() => {
-                        document.querySelector('.cont').classList.remove('s--signup');
-                        showMessage(document.getElementById('loginMessage'), 'Account created! Please sign in.', 'success');
-                    }, 1500);
-                } else {
-                    showMessage(messageDiv, data.message, 'error');
-                }
-            } catch (error) {
-                showMessage(messageDiv, 'Network error. Please try again.', 'error');
-            }
+        if (!username || !email || !password) {
+            showPopup('Please fill in all fields', 'error');
+            return;
         }
 
-        // Helper function to show messages
-        function showMessage(element, message, type) {
-            element.textContent = message;
-            element.className = `message ${type}`;
-            element.style.display = 'block';
-            
-            // Hide message after 5 seconds
-            setTimeout(() => {
-                element.style.display = 'none';
-            }, 5000);
+        if (password.length < 6) {
+            showPopup('Password must be at least 6 characters', 'error');
+            return;
         }
 
-        // Allow Enter key to submit forms
-        document.getElementById('loginPassword').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                login();
-            }
-        });
+        try {
+            const response = await fetch('/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, email, password })
+            });
 
-        document.getElementById('signupPassword').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                signup();
+            const data = await response.json();
+
+            if (response.ok) {
+                // Store token and user
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('userId', data.user.id);
+                localStorage.setItem('user', JSON.stringify(data.user));
+
+                // Clear form
+                document.getElementById('signupUsername').value = '';
+                document.getElementById('signupEmail').value = '';
+                document.getElementById('signupPassword').value = '';
+
+                showPopup('Account created! Please sign in.', 'success');
+
+                setTimeout(() => {
+                    document.querySelector('.cont').classList.remove('s--signup');
+                }, 1500);
+            } else {
+                showPopup(data.message, 'error');
             }
-        });
-    </script>
+        } catch (error) {
+            showPopup('Network error. Please try again.', 'error');
+        }
+    }
+
+    // ── ENTER KEY ──
+    document.getElementById('loginPassword').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') login();
+    });
+
+    document.getElementById('signupPassword').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') signup();
+    });
+</script>
 </body>
 </html>
