@@ -177,21 +177,33 @@ router.post("/interact", auth, async (req, res) => {
 // ─── GET /trending — top 10 most-saved places across all users ───────────────
 router.get("/trending", async (req, res) => {
   try {
+    const city = (req.query.city || '').toLowerCase().trim();
+
+    const matchStage = { "interactions.action": "saved" };
+
     const trending = await User.aggregate([
       { $unwind: "$interactions" },
-      { $match: { "interactions.action": "saved" } },
+      { $match: matchStage },
       {
         $group: {
-          _id:          "$interactions.name",
-          save_count:   { $sum: 1 },
-          city:         { $first: "$interactions.city" },
-          vibe:         { $first: "$interactions.vibe" },
-          latitude:     { $first: "$interactions.latitude" },
-          longitude:    { $first: "$interactions.longitude" },
+          _id:        "$interactions.name",
+          save_count: { $sum: 1 },
+          city:       { $first: "$interactions.city" },
+          vibe:       { $first: "$interactions.vibe" },
+          latitude:   { $first: "$interactions.latitude" },
+          longitude:  { $first: "$interactions.longitude" },
         }
       },
+      // ← filter by city after grouping
+      ...(city ? [{
+        $match: {
+          $expr: {
+            $eq: [{ $toLower: "$city" }, city]
+          }
+        }
+      }] : []),
       { $sort: { save_count: -1 } },
-      { $limit: 10 },
+      { $limit: 3 },
       {
         $project: {
           _id: 0,
@@ -211,5 +223,4 @@ router.get("/trending", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch trending places" });
   }
 });
-
 module.exports = router;

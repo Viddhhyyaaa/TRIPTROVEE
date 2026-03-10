@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Find Travel Buddies — TripTrove</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Montserrat', sans-serif; }
+
+    .glass-header {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+
+    .match-card {
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(8px);
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .match-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    .match-card:nth-child(1) { animation-delay: 0.05s; }
+    .match-card:nth-child(2) { animation-delay: 0.1s; }
+    .match-card:nth-child(3) { animation-delay: 0.15s; }
+    .match-card:nth-child(4) { animation-delay: 0.2s; }
+    .match-card:nth-child(5) { animation-delay: 0.25s; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 4px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .avatar {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #2563eb, #60a5fa);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .shared-tag {
+      background: rgba(37, 99, 235, 0.3);
+      border: 1px solid rgba(37, 99, 235, 0.5);
+      color: #93c5fd;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      text-transform: capitalize;
+    }
+
+    .their-tag {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.45);
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      text-transform: capitalize;
+    }
+
+    .vibe-tag {
+      background: rgba(37, 99, 235, 0.25);
+      border: 1px solid rgba(37, 99, 235, 0.4);
+      color: #93c5fd;
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      text-transform: capitalize;
+    }
+
+    .score-circle {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      border: 2px solid rgba(37, 99, 235, 0.5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(37, 99, 235, 0.15);
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body class="bg-[url('http://i.pinimg.com/1200x/37/fd/b1/37fdb107656e4410de351b2104cbf570.jpg')] bg-cover bg-center min-h-screen">
+
+  <!-- Header -->
+  <header class="glass-header fixed top-0 left-0 w-full z-50 shadow-md">
+    <div class="flex items-center justify-between px-6 py-5">
+      <div class="text-3xl font-bold text-white">
+        triptr<span class="text-blue-400">o</span>ve
+      </div>
+      <button onclick="goToProfile()" class="flex items-center gap-2 text-white/70 hover:text-white text-sm font-semibold transition-colors">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+          <circle cx="12" cy="8" r="4"></circle>
+          <path d="M6 21v-2a6 6 0 0 1 12 0v2"></path>
+        </svg>
+        Profile
+      </button>
+    </div>
+  </header>
+
+  <main class="flex flex-col items-center pt-32 px-4 pb-16">
+
+    <!-- Main card -->
+    <div class="w-full max-w-2xl glass-card rounded-2xl p-8 shadow-xl shadow-blue-900/30">
+
+      <h1 class="text-3xl text-white text-center mb-2 font-bold tracking-tight"> Find Travel Buddies</h1>
+      <p class="text-white/60 text-center text-sm mb-6">People who travel like you — matched by vibe, powered by AI</p>
+
+      <!-- Your vibes -->
+      <div id="yourVibes" class="flex flex-wrap justify-center gap-2 mb-8"></div>
+
+      <!-- Not logged in -->
+      <div id="loginPrompt" class="hidden text-center py-10">
+        <div class="text-5xl mb-4"></div>
+        <h3 class="text-white/70 font-semibold text-lg mb-2">Login to find your travel tribe</h3>
+        <p class="text-white/40 text-sm mb-6">We match you with travellers who share your emotional travel style.</p>
+        <button onclick="window.location.href='login.html'"
+          class="bg-blue-500 hover:bg-blue-600 text-white font-bold px-8 py-3 rounded-xl text-sm transition-all">
+          Login / Register
+        </button>
+      </div>
+
+      <!-- No vibe history -->
+      <div id="noVibes" class="hidden text-center py-10">
+        <div class="text-5xl mb-4">🌍</div>
+        <h3 class="text-white/70 font-semibold text-lg mb-2">No vibe history yet</h3>
+        <p class="text-white/40 text-sm mb-6">Start exploring places and saving your vibes — then come back to find your travel matches!</p>
+        <button onclick="window.location.href='front.html'"
+          class="bg-blue-500 hover:bg-blue-600 text-white font-bold px-8 py-3 rounded-xl text-sm transition-all">
+          Explore Places
+        </button>
+      </div>
+
+      <!-- Loading -->
+      <div id="loadingState" class="flex flex-col items-center gap-3 py-10">
+        <div class="spinner"></div>
+        <p class="text-white/60 text-sm">Finding your travel tribe...</p>
+      </div>
+
+      <!-- Empty -->
+      <div id="emptyState" class="hidden text-center py-10">
+        <div class="text-5xl mb-4"></div>
+        <h3 class="text-white/70 font-semibold text-lg mb-2">No matches found yet</h3>
+        <p class="text-white/40 text-sm">Not enough travellers with similar vibes yet. Keep exploring and check back soon!</p>
+      </div>
+
+      <!-- Results -->
+      <div id="resultsSection" class="hidden">
+        <p id="matchCount" class="text-white/30 text-xs uppercase tracking-widest mb-5"></p>
+        <div id="matchesList" class="space-y-4"></div>
+      </div>
+
+    </div>
+
+    <!-- Back link -->
+    <a href="index.html" class="mt-6 text-white/40 hover:text-white/70 text-sm transition-colors">← Back to Home</a>
+
+  </main>
+
+  <footer class="text-center text-white/30 text-xs py-6">
+    <p>&copy; 2025 Triptroove. All Rights Reserved.</p>
+  </footer>
+
+  <script>
+    const token = localStorage.getItem('token');
+    const userId = localStorage.getItem('userId');
+
+    function goToProfile() {
+      if (!token) { alert('Please login first!'); return; }
+      window.location.href = '/profile.html';
+    }
+
+    function hide(id) { document.getElementById(id).classList.add('hidden'); }
+    function show(id) { document.getElementById(id).classList.remove('hidden'); }
+
+    function getInitial(name) {
+      return name ? name.charAt(0).toUpperCase() : '?';
+    }
+
+    async function loadMatches() {
+      if (!token || !userId) {
+        hide('loadingState');
+        show('loginPrompt');
+        return;
+      }
+
+      try {
+        const res = await fetch('/find-travellers', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        const data = await res.json();
+        hide('loadingState');
+
+        if (data.error && data.error.includes('vibe')) {
+          show('noVibes');
+          return;
+        }
+
+        // Show your vibes
+        const yourVibes = data.your_vibes || [];
+        if (yourVibes.length > 0) {
+          const vibesContainer = document.getElementById('yourVibes');
+          yourVibes.forEach(v => {
+            const tag = document.createElement('span');
+            tag.className = 'vibe-tag';
+            tag.textContent = v;
+            vibesContainer.appendChild(tag);
+          });
+        }
+
+        const matches = data.matches || [];
+
+        if (matches.length === 0) {
+          show('emptyState');
+          return;
+        }
+
+        show('resultsSection');
+        document.getElementById('matchCount').textContent =
+          `${matches.length} Traveller${matches.length > 1 ? 's' : ''} matched for you`;
+
+        const list = document.getElementById('matchesList');
+        list.innerHTML = '';
+
+        matches.forEach((match) => {
+          const sharedVibes = match.shared_vibes || [];
+          const theirVibes = (match.their_vibes || []).filter(v => !sharedVibes.includes(v));
+
+          const card = document.createElement('div');
+          card.className = 'match-card';
+          card.innerHTML = `
+            <div class="avatar">${getInitial(match.username)}</div>
+            <div class="flex-1 min-w-0">
+              <div class="text-white font-bold text-sm mb-2 capitalize">${match.username}</div>
+              <div class="flex flex-wrap gap-1.5">
+                ${sharedVibes.map(v => `<span class="shared-tag">✦ ${v}</span>`).join('')}
+                ${theirVibes.map(v => `<span class="their-tag">${v}</span>`).join('')}
+              </div>
+            </div>
+            <div class="score-circle">
+              <span class="text-blue-300 font-bold text-sm leading-none">${match.match_percentage}%</span>
+              <span class="text-white/30 text-xs uppercase tracking-wide mt-0.5">match</span>
+            </div>
+          `;
+          list.appendChild(card);
+        });
+
+      } catch (err) {
+        hide('loadingState');
+        show('emptyState');
+        console.error('Match error:', err);
+      }
+    }
+
+    loadMatches();
+  </script>
+
+</body>
+</html>

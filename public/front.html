@@ -152,10 +152,27 @@
           Get Suggestions
         </button>
       </div>
-
-      <!-- Results -->
+     <!-- Results -->
       <div id="results" class="mt-8 space-y-4"></div>
+    </div>  <!-- closes main glass card -->
+
+    <!-- Recommended for You Section — OUTSIDE the glass card -->
+    <div id="recommendedSection" class="w-full max-w-2xl mt-8" style="display:none;">
+      <div class="glass-card rounded-2xl p-6 shadow-xl shadow-blue-900/30">
+        <h2 class="text-xl font-bold text-white mb-1"> Recommended for You</h2>
+        <p class="text-white/50 text-xs mb-4">Based on your travel history</p>
+        <div id="recommendedCards" class="space-y-3"></div>
+      </div>
+       <!-- Trending Places -->
+  <div id="trendingSection" style="display:none;">
+    <div class="glass-card rounded-2xl p-6 shadow-xl shadow-blue-900/30">
+      <h2 class="text-lg font-bold text-white mb-1"> Trending Places</h2>
+      <p class="text-white/50 text-xs mb-4">Most visited by TripTrove users</p>
+      <div id="trendingCards" class="space-y-3"></div>
     </div>
+  </div>
+    </div>
+
   </main>
 
   <script>
@@ -287,6 +304,10 @@
 
     // ─── Get Suggestions ─────────────────────────────────────
     document.getElementById("getSuggestionsBtn").addEventListener("click", async () => {
+      document.getElementById('recommendedSection').style.display = 'none';
+      document.getElementById('trendingSection').style.display = 'none';
+      document.getElementById('recommendedCards').innerHTML = '';
+      document.getElementById('trendingCards').innerHTML = '';
       const city   = document.getElementById("city").value.trim();
       const radius = document.getElementById("travelRadius").value;
       const vibes  = Array.from(document.querySelectorAll("input[name='vibe']:checked")).map(v => v.value);
@@ -376,12 +397,99 @@
             </div>
           `;
         }).join('');
-
+        loadRecommendedForYou();
+        loadTrending();
       } catch (err) {
         console.error(err);
         resultsDiv.innerHTML = "<p class='text-red-300 text-center'>Something went wrong. Please try again.</p>";
       }
     });
+    async function loadRecommendedForYou() {
+  const token = localStorage.getItem('token');
+  if (!token) return;
+
+  const city = document.getElementById('city').value.trim();
+
+  try {
+    const res = await fetch(`/recommend-for-you?city=${encodeURIComponent(city)}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    const data = await res.json();
+    if (!data.recommendations || data.recommendations.length === 0) return;
+
+    // Show section
+    document.getElementById('recommendedSection').style.display = 'block';
+    const container = document.getElementById('recommendedCards');
+    container.innerHTML = '';
+
+    data.recommendations.forEach(place => {
+      const card = document.createElement('div');
+      card.className = 'flex items-center justify-between bg-white/10 rounded-xl px-4 py-3 border border-white/10';
+      card.innerHTML = `
+        <div>
+          <h4 class="text-white font-semibold text-sm">${place.place}</h4>
+          <p class="text-white/50 text-xs mt-0.5">
+            ${place.vibe || ''} · ${place.city || ''} · ⭐ ${place.predicted_rating}
+          </p>
+        </div>
+        <button onclick="window.open('https://www.google.com/maps/search/${encodeURIComponent(place.place)}', '_blank')"
+          class="text-xs bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-lg ml-3 whitespace-nowrap">
+          Open in Maps
+        </button>
+      `;
+      container.appendChild(card);
+    });
+
+  } catch (err) {
+    console.error('Recommended for you error:', err);
+  }
+}
+async function loadTrending() {
+  const city = document.getElementById('city').value.trim();
+
+  try {
+    const res = await fetch(`/trending?city=${encodeURIComponent(city)}`);
+    const trending = await res.json();
+
+    if (!trending || trending.length === 0) return;
+
+    document.getElementById('trendingSection').style.display = 'block';
+    const container = document.getElementById('trendingCards');
+    container.innerHTML = '';
+
+    trending.slice(0, 3).forEach((place, index) => {
+      const card = document.createElement('div');
+      card.className = 'flex items-center justify-between bg-white/10 rounded-xl px-4 py-3 border border-white/10';
+      card.innerHTML = `
+        <div class="flex items-center gap-3">
+          <span class="text-white/30 font-bold text-lg">#${index + 1}</span>
+          <div>
+            <h4 class="text-white font-semibold text-sm">${place.name}</h4>
+            <p class="text-white/50 text-xs mt-0.5">
+              ${place.vibe || ''} · ${place.city || ''} · 🔥 ${place.save_count} saves
+            </p>
+          </div>
+        </div>
+        <button onclick="window.open('https://www.google.com/maps/search/${encodeURIComponent(place.name)}', '_blank')"
+          class="text-xs bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg ml-3 whitespace-nowrap">
+          Open in Maps
+        </button>
+      `;
+      container.appendChild(card);
+    });
+
+  } catch (err) {
+    console.error('Trending error:', err);
+  }
+}
+
+//City change reloads trending only 
+document.getElementById('city').addEventListener('change', () => {
+  loadTrending();
+});
   </script>
 </body>
 </html>

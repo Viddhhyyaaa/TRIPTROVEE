@@ -246,7 +246,180 @@ app.get('/profile', auth, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+const http = require('http');
 
+app.get('/recommend-for-you', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const city = req.query.city || '';
+
+    // Call Flask ML service
+    const mlPayload = JSON.stringify({
+      user_id: req.userId.toString(),
+      city: city.toLowerCase(),
+      top_k: 3
+    });
+
+    const options = {
+      hostname: '127.0.0.1',
+      port: 5001,
+      path: '/ml-recommend',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(mlPayload)
+      }
+    };
+
+    const mlRequest = http.request(options, (mlRes) => {
+      let rawData = '';
+      mlRes.on('data', chunk => rawData += chunk);
+      mlRes.on('end', () => {
+        try {
+          const mlData = JSON.parse(rawData);
+          res.json({
+            recommendations: mlData.recommendations,
+            model: mlData.model,
+            rmse: mlData.rmse
+          });
+        } catch (e) {
+          res.status(500).json({ message: 'ML parse error' });
+        }
+      });
+    });
+
+    mlRequest.on('error', (e) => {
+      console.error('ML service error:', e);
+      res.status(500).json({ message: 'ML service unavailable' });
+    });
+
+    mlRequest.write(mlPayload);
+    mlRequest.end();
+
+  } catch (err) {
+    console.error('Recommend for you error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+// ── TRENDING PLACES ──
+app.get('/trending', async (req, res) => {
+  try {
+    const city = (req.query.city || '').toLowerCase().trim();
+    const users = await User.find({});
+
+    const placeCounts = {};
+
+    users.forEach(user => {
+      // Check interactions array
+      (user.interactions || []).forEach(interaction => {
+        const name = interaction.name || interaction.place_name;
+        const placeCity = (interaction.city || '').toLowerCase().trim();
+        if (!name) return;
+
+        // ← strict city filter
+        if (city && placeCity !== city) return;
+
+        if (!placeCounts[name]) {
+          placeCounts[name] = {
+            name,
+            city: interaction.city || '',
+            vibe: interaction.vibe || '',
+            count: 0
+          };
+        }
+        placeCounts[name].count++;
+      });
+
+      // Also check saved_places array
+      (user.saved_places || []).forEach(place => {
+        const name = place.name;
+        const placeCity = (place.city || '').toLowerCase().trim();
+        if (!name) return;
+
+        if (city && placeCity !== city) return;
+
+        if (!placeCounts[name]) {
+          placeCounts[name] = {
+            name,
+            city: place.city || '',
+            vibe: place.vibe || '',
+            count: 0
+          };
+        }
+        placeCounts[name].count++;
+      });
+    });
+
+    const trending = Object.values(placeCounts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+
+    res.json({ trending });
+
+  } catch (err) {
+    console.error('Trending error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+app.get('/find-travellers', auth, async (req, res) => {
+  try {
+    // Get current user's vibe history
+    const currentUser = await User.findById(req.userId).select('vibe_history username');
+    if (!currentUser) return res.status(404).json({ error: 'User not found' });
+
+    // Get all other users' vibe history and username
+    const allUsers = await User.find({ _id: { $ne: req.userId } })
+      .select('_id username vibe_history');
+
+    const allUsersFormatted = allUsers.map(u => ({
+      user_id: u._id.toString(),
+      username: u.username,
+      vibe_history: u.vibe_history || []
+    }));
+
+    // Call Flask KNN endpoint
+    const flaskResponse = await new Promise((resolve, reject) => {
+      const postData = JSON.stringify({
+        user_id: req.userId,
+        vibe_history: currentUser.vibe_history || [],
+        all_users: allUsersFormatted,
+        top_k: 5
+      });
+
+      const options = {
+        hostname: 'localhost',
+        port: 5001,
+        path: '/match-travellers',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(postData)
+        }
+      };
+
+      const request = http.request(options, (response) => {
+        let data = '';
+        response.on('data', chunk => data += chunk);
+        response.on('end', () => resolve(JSON.parse(data)));
+      });
+
+      request.on('error', reject);
+      request.write(postData);
+      request.end();
+    });
+
+    res.json({
+      matches: flaskResponse.matches || [],
+      your_vibes: currentUser.vibe_history || []
+    });
+
+  } catch (err) {
+    console.error('Find travellers error:', err);
+    res.status(500).json({ error: 'Failed to find travellers' });
+  }
+});
 // =====================
 // START SERVER
 // =====================
