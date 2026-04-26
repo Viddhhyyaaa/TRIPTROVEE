@@ -1,0 +1,6 @@
+ 
+[phases.setup]
+nixPkgs = ["python311", "gcc"]
+
+[start]
+cmd = "python3 ml_service.py"
