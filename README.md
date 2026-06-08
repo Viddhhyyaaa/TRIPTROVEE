@@ -4,8 +4,6 @@ TripTrove is an AI-powered travel planning platform that helps users discover de
 
 The platform combines AI-generated travel suggestions, collaborative filtering, behavioral analytics, and semantic traveler matching to create a personalized travel planning experience.
 
----
-
 ##  Features
 
 ###  Smart Place Discovery
@@ -51,8 +49,6 @@ These interactions are used to improve future recommendations.
 - Google Maps integration.
 - Uber deep-link integration for transportation assistance.
 
----
-
 ##  System Architecture
 
 TripTrove follows a two-service architecture:
@@ -77,8 +73,6 @@ Responsibilities:
 - Personalized recommendation inference
 - Traveler matching
 - Embedding-based similarity computation
-
----
 
 ##  Tech Stack
 
@@ -113,8 +107,6 @@ Responsibilities:
 - Git
 - GitHub
 
----
-
 ##  Workflow
 
 1. User logs in securely.
@@ -126,16 +118,12 @@ Responsibilities:
 7. Traveler matching identifies compatible travelers.
 8. Profile dashboard reflects user activity and travel history.
 
----
-
 ##  Security Features
 
 - JWT-based authentication
 - Password hashing using bcryptjs
 - Protected routes for user-specific operations
 - User-scoped data access
-
----
 
 ##  Key Highlights
 
@@ -147,7 +135,6 @@ Responsibilities:
 - Profile-based travel memory
 - Modular Node.js + Flask architecture
 
----
 
 ##  Author
 
